@@ -1,14 +1,13 @@
 import { NextFunction, Request, Response } from "express";
-import logger from "./logger";
+import logger from "../config/logger";
 
-export const tryCatch = async (fn: Function): Promise<void> => {
-  try {
-    return await fn((req: Request, res: Response, next: NextFunction) => {
-      logger.error("Error in tryCatch wrapper");
-      next();
-    });
-  } catch (error) {
-    logger.error(error);
-    throw error;
-  }
+export const tryCatch = (fn: Function) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await fn(req, res, next);
+    } catch (error) {
+      logger.error(error);
+      next(error);
+    }
+  };
 };

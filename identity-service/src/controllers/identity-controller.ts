@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import { tryCatch } from "../utils/tryCatch";
 import { validateRegistration } from "../utils/validation";
 import { generateToken } from "../utils/generateToken";
-import logger from "../utils/logger";
+import logger from "../config/logger";
 import User from "../models/user";
+import argon2 from "argon2";
 
 export const register = tryCatch(async (req: Request, res: Response) => {
   const { error } = validateRegistration(req.body);
@@ -31,7 +32,9 @@ export const register = tryCatch(async (req: Request, res: Response) => {
       .json({ error: "User with this email or username already exists" });
   }
 
-  user = new User({ username, email, password });
+  const hashedPassword = await argon2.hash(password);
+
+  user = new User({ username, email, password: hashedPassword });
   await user.save();
 
   const { accessToken, refreshToken } = await generateToken(user);

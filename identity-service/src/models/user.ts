@@ -28,17 +28,6 @@ const userSchema = new Schema<IUser>(
   },
 );
 
-userSchema.pre<IUser>("save", async function (next: any) {
-  if (!this.isModified("password")) return next();
-  try {
-    const hash = await argon2.hash(this.password);
-    this.password = hash;
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
-
 userSchema.methods.comparePassword = async function (
   candidatePassword: string,
 ): Promise<boolean> {
