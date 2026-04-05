@@ -48,6 +48,16 @@ const apiRateLimiter = rateLimit({
 app.use(apiRateLimiter);
 
 app.use((req, res, next) => {
+  rateLimiter
+    .consume(req.ip!)
+    .then(() => next())
+    .catch(() => {
+      logger.warn("Rate limit exceeded for IP: %s", req.ip);
+      res.status(429).json({ success: false, error: "Too many requests" });
+    });
+});
+
+app.use((req, res, next) => {
   logger.info("Incoming request: %s %s", req.method, req.url);
   logger.debug("Request body: %o", req.body);
   next();
@@ -68,7 +78,7 @@ const proxyOptions = {
 };
 
 app.use(
-  "v1/auth",
+  "/v1/auth",
   proxy(process.env.IDENTITY_SERVICE_URL!, {
     ...proxyOptions,
     proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
