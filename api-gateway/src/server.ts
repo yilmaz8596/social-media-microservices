@@ -9,6 +9,7 @@ import { RateLimiterRedis } from "rate-limiter-flexible";
 import logger from "./config/logger";
 import proxy from "express-http-proxy";
 import { errorHandler } from "./middleware/errorHandler";
+import { validateToken } from "./middleware/validateToken";
 
 dotenv.config();
 
@@ -98,10 +99,34 @@ app.use(
   }),
 );
 
+app.use(
+  "/v1/posts",
+  validateToken,
+  proxy(process.env.POST_SERVICE_URL!, {
+    ...proxyOptions,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+      // Add authentication headers or other custom logic here if needed
+      proxyReqOpts.headers["Content-Type"] = "application/json";
+      proxyReqOpts.headers["x-user-id"] = (srcReq as any).user?.userId; // Pass user ID to post service
+      return proxyReqOpts;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      // You can modify the response from the post service here if needed
+      logger.info(
+        "Received response from post service for %s %s",
+        userReq.method,
+        userReq.url,
+      );
+      return proxyResData;
+    },
+  }),
+);
+
 app.use(errorHandler);
 
 app.listen(PORT, () => {
   logger.info(`API Gateway is running on port ${PORT}`);
   logger.info(`Identity Service URL: ${process.env.IDENTITY_SERVICE_URL}`);
+  logger.info(`Post Service URL: ${process.env.POST_SERVICE_URL}`);
   logger.info(`Redis URL: ${process.env.REDIS_URL}`);
 });
